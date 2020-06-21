@@ -1,12 +1,28 @@
 module Timeline.Time.Limit where
 
 import Timeline.Time.Value (DecidedValue(..))
-import Timeline.Time.Min (Min)
-import Timeline.Time.Max (Max)
-import Timeline.Time.Bounds (Bounds)
+import Timeline.Time.Min
+  ( Min
+  , putArrayBufferMin
+  , readArrayBufferMin
+  , byteLengthMin
+  )
+import Timeline.Time.Max
+  ( Max
+  , putArrayBufferMax
+  , readArrayBufferMax
+  , byteLengthMax
+  )
+import Timeline.Time.Bounds
+  ( Bounds
+  , putArrayBufferBounds
+  , readArrayBufferBounds
+  , byteLengthBounds
+  )
 import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Data.UInt (fromInt) as UInt
 import Data.NonEmpty (NonEmpty(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
@@ -20,9 +36,19 @@ import Data.Argonaut
   , (:=)
   , (.:)
   )
+import Data.ArrayBuffer.Class
+  ( class EncodeArrayBuffer
+  , class DecodeArrayBuffer
+  , class DynamicByteLength
+  , putArrayBuffer
+  , readArrayBuffer
+  , byteLength
+  )
+import Data.ArrayBuffer.Class.Types (Float64BE (..), Uint8 (..))
 import Control.Alternative ((<|>))
 import Test.QuickCheck (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (oneOf)
+import Type.Proxy (Proxy(..))
 
 data Limit a
   = LimitBounds (Bounds a)
@@ -30,6 +56,12 @@ data Limit a
   | LimitMax (Max a)
 
 derive instance genericLimit :: Generic a a' => Generic (Limit a) _
+
+instance functorLimit :: Functor Limit where
+  map f x = case x of
+    LimitBounds y -> LimitBounds y {begin = f y.begin, end = f y.end}
+    LimitMin y -> LimitMin y {begin = f y.begin}
+    LimitMax y -> LimitMax y {end = f y.end}
 
 instance eqLimit :: Eq a => Eq (Limit a) where
   eq x y = case Tuple x y of
@@ -60,6 +92,53 @@ instance decodeJsonLimit :: DecodeJson a => DecodeJson (Limit a) where
 
       limitMax = LimitMax <$> o .: "limitMax"
     limitBounds <|> limitMin <|> limitMax
+
+instance encodeArrayBufferLimit :: EncodeArrayBuffer a => EncodeArrayBuffer (Limit a) where
+  putArrayBuffer b o x = case x of
+    LimitBounds y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 0))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferBounds (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+    LimitMin y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 1))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferMin (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+    LimitMax y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 2))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferMax (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+
+instance decodeArrayBufferLimit :: (DecodeArrayBuffer a, DynamicByteLength a) => DecodeArrayBuffer (Limit a) where
+  readArrayBuffer b o = do
+    mC <- readArrayBuffer b o
+    case mC of
+      Nothing -> pure Nothing
+      Just (Uint8 c)
+        | c == UInt.fromInt 0 -> map LimitBounds <$> readArrayBufferBounds (Proxy :: Proxy a) b (o + 1)
+        | c == UInt.fromInt 1 -> map LimitMin <$> readArrayBufferMin (Proxy :: Proxy a) b (o + 1)
+        | c == UInt.fromInt 2 -> map LimitMax <$> readArrayBufferMax (Proxy :: Proxy a) b (o + 1)
+        | otherwise -> pure Nothing
+
+instance dynamicByteLengthLimit :: DynamicByteLength a => DynamicByteLength (Limit a) where
+  byteLength x = (_ + 1) <$> case x of
+    LimitBounds y -> byteLengthBounds (Proxy :: Proxy a) y
+    LimitMin y -> byteLengthMin (Proxy :: Proxy a) y
+    LimitMax y -> byteLengthMax (Proxy :: Proxy a) y
 
 instance arbitraryLimit :: Arbitrary a => Arbitrary (Limit a) where
   arbitrary = oneOf $ NonEmpty (LimitBounds <$> arbitrary) [ LimitMin <$> arbitrary, LimitMax <$> arbitrary ]
@@ -99,6 +178,31 @@ instance decodeJsonDecidedLimit :: DecodeJson DecidedLimit where
     let
       decodeNumber = DecidedLimitNumber <$> o .: "numberLimit"
     decodeNumber
+
+instance encodeArrayBufferDecidedLimit :: EncodeArrayBuffer DecidedLimit where
+  putArrayBuffer b o x = case x of
+    DecidedLimitNumber y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 0))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBuffer b (o + w) (map Float64BE y)
+          case mW' of
+            Nothing -> pure Nothing
+            Just w' -> pure (Just (w + w'))
+
+instance decodeArrayBufferDecidedLimit :: DecodeArrayBuffer DecidedLimit where
+  readArrayBuffer b o = do
+    mC <- readArrayBuffer b o
+    case mC of
+      Nothing -> pure Nothing
+      Just (Uint8 c)
+        | c == UInt.fromInt 0 -> map (DecidedLimitNumber <<< map (\(Float64BE x) -> x)) <$> readArrayBuffer b (o + 1)
+        | otherwise -> pure Nothing
+
+instance dynamicByteLengthDecidedLimit :: DynamicByteLength DecidedLimit where
+  byteLength x = (_ + 1) <$> case x of
+    DecidedLimitNumber y -> byteLength (map Float64BE y)
 
 instance arbitraryDecidedLimit :: Arbitrary DecidedLimit where
   arbitrary = oneOf $ NonEmpty (DecidedLimitNumber <$> arbitrary) []

@@ -14,7 +14,6 @@ import Data.Argonaut
   , decodeJson
   , fail
   )
-import Data.ArrayBuffer.Types (ArrayBuffer, ByteOffset, ByteLength)
 import Data.ArrayBuffer.Class
   ( class EncodeArrayBuffer
   , class DecodeArrayBuffer

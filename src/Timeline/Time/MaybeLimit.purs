@@ -2,12 +2,28 @@ module Timeline.Time.MaybeLimit where
 
 import Timeline.Time.Unit (DecidedUnit(..))
 import Timeline.Time.Value (DecidedValue(..))
-import Timeline.Time.Min (Min)
-import Timeline.Time.Max (Max)
-import Timeline.Time.Bounds (Bounds)
+import Timeline.Time.Min
+  ( Min
+  , putArrayBufferMin
+  , readArrayBufferMin
+  , byteLengthMin
+  )
+import Timeline.Time.Max
+  ( Max
+  , putArrayBufferMax
+  , readArrayBufferMax
+  , byteLengthMax
+  )
+import Timeline.Time.Bounds
+  ( Bounds
+  , putArrayBufferBounds
+  , readArrayBufferBounds
+  , byteLengthBounds
+  )
 import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Data.UInt (fromInt) as UInt
 import Data.NonEmpty (NonEmpty(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
@@ -23,9 +39,19 @@ import Data.Argonaut
   , (.:)
   , fail
   )
+import Data.ArrayBuffer.Class
+  ( class EncodeArrayBuffer
+  , class DecodeArrayBuffer
+  , class DynamicByteLength
+  , putArrayBuffer
+  , readArrayBuffer
+  , byteLength
+  )
+import Data.ArrayBuffer.Class.Types (Float64BE (..), Uint8 (..))
 import Control.Alternative ((<|>))
 import Test.QuickCheck (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (oneOf)
+import Type.Proxy (Proxy(..))
 
 data MaybeLimit a
   = JustLimitBounds (Bounds a)
@@ -34,6 +60,13 @@ data MaybeLimit a
   | NothingLimit
 
 derive instance genericMaybeLimit :: Generic a a' => Generic (MaybeLimit a) _
+
+instance functorMaybeLimit :: Functor MaybeLimit where
+  map f x = case x of
+    JustLimitBounds y -> JustLimitBounds y {begin = f y.begin, end = f y.end}
+    JustLimitMin y -> JustLimitMin y {begin = f y.begin}
+    JustLimitMax y -> JustLimitMax y {end = f y.end}
+    NothingLimit -> NothingLimit
 
 instance eqMaybeLimit :: Eq a => Eq (MaybeLimit a) where
   eq x y = case Tuple x y of
@@ -76,6 +109,56 @@ instance decodeJsonMaybeLimit :: DecodeJson a => DecodeJson (MaybeLimit a) where
           "nothingLimit" -> pure NothingLimit
           _ -> fail $ "Unrecognized MaybeLimit: " <> s
     obj <|> str
+
+instance encodeArrayBufferMaybeLimit :: EncodeArrayBuffer a => EncodeArrayBuffer (MaybeLimit a) where
+  putArrayBuffer b o x = case x of
+    JustLimitBounds y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 0))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferBounds (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+    JustLimitMin y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 1))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferMin (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+    JustLimitMax y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 2))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBufferMax (Proxy :: Proxy a) b (o + w) y
+          case mW' of
+            Nothing -> pure (Just w)
+            Just w' -> pure (Just (w + w'))
+    NothingLimit -> putArrayBuffer b o (Uint8 (UInt.fromInt 3))
+
+instance decodeArrayBufferMaybeLimit :: (DecodeArrayBuffer a, DynamicByteLength a) => DecodeArrayBuffer (MaybeLimit a) where
+  readArrayBuffer b o = do
+    mC <- readArrayBuffer b o
+    case mC of
+      Nothing -> pure Nothing
+      Just (Uint8 c)
+        | c == UInt.fromInt 0 -> map JustLimitBounds <$> readArrayBufferBounds (Proxy :: Proxy a) b (o + 1)
+        | c == UInt.fromInt 1 -> map JustLimitMin <$> readArrayBufferMin (Proxy :: Proxy a) b (o + 1)
+        | c == UInt.fromInt 2 -> map JustLimitMax <$> readArrayBufferMax (Proxy :: Proxy a) b (o + 1)
+        | c == UInt.fromInt 3 -> pure (Just NothingLimit)
+        | otherwise -> pure Nothing
+
+instance dynamicByteLengthMaybeLimit :: DynamicByteLength a => DynamicByteLength (MaybeLimit a) where
+  byteLength x = (_ + 1) <$> case x of
+    JustLimitBounds y -> byteLengthBounds (Proxy :: Proxy a) y
+    JustLimitMin y -> byteLengthMin (Proxy :: Proxy a) y
+    JustLimitMax y -> byteLengthMax (Proxy :: Proxy a) y
+    NothingLimit -> pure 0
 
 instance arbitraryMaybeLimit :: Arbitrary a => Arbitrary (MaybeLimit a) where
   arbitrary = oneOf $ NonEmpty (JustLimitBounds <$> arbitrary) [ JustLimitMin <$> arbitrary, JustLimitMax <$> arbitrary, pure NothingLimit ]
@@ -123,6 +206,31 @@ instance decodeJsonDecidedMaybeLimit :: DecodeJson DecidedMaybeLimit where
     let
       decodeNumber = DecidedMaybeLimitNumber <$> o .: "numberMaybeLimit"
     decodeNumber
+
+instance encodeArrayBufferDecidedMaybeLimit :: EncodeArrayBuffer DecidedMaybeLimit where
+  putArrayBuffer b o x = case x of
+    DecidedMaybeLimitNumber y -> do
+      mW <- putArrayBuffer b o (Uint8 (UInt.fromInt 0))
+      case mW of
+        Nothing -> pure Nothing
+        Just w -> do
+          mW' <- putArrayBuffer b (o + w) (map Float64BE y)
+          case mW' of
+            Nothing -> pure Nothing
+            Just w' -> pure (Just (w + w'))
+
+instance decodeArrayBufferDecidedMaybeLimit :: DecodeArrayBuffer DecidedMaybeLimit where
+  readArrayBuffer b o = do
+    mC <- readArrayBuffer b o
+    case mC of
+      Nothing -> pure Nothing
+      Just (Uint8 c)
+        | c == UInt.fromInt 0 -> map (DecidedMaybeLimitNumber <<< map (\(Float64BE x) -> x)) <$> readArrayBuffer b (o + 1)
+        | otherwise -> pure Nothing
+
+instance dynamicByteLengthDecidedMaybeLimit :: DynamicByteLength DecidedMaybeLimit where
+  byteLength x = (_ + 1) <$> case x of
+    DecidedMaybeLimitNumber y -> byteLength (map Float64BE y)
 
 instance arbitraryDecidedMaybeLimit :: Arbitrary DecidedMaybeLimit where
   arbitrary = oneOf $ NonEmpty (DecidedMaybeLimitNumber <$> arbitrary) []

@@ -46,13 +46,13 @@ tests = do
     jsonTest "DecidedMaybeLimit" (Proxy :: Proxy DecidedMaybeLimit)
   describe "Binary" do
     binaryTest "DecidedUnit" (Proxy :: Proxy DecidedUnit)
-    -- binaryTest "DecidedValue" (Proxy :: Proxy DecidedValue)
-    -- binaryTest "DecidedMin" (Proxy :: Proxy DecidedMin)
-    -- binaryTest "DecidedMax" (Proxy :: Proxy DecidedMax)
+    binaryTest "DecidedValue" (Proxy :: Proxy DecidedValue)
+    binaryTest "DecidedMin" (Proxy :: Proxy DecidedMin)
+    binaryTest "DecidedMax" (Proxy :: Proxy DecidedMax)
     binaryTest "DecidedSpan" (Proxy :: Proxy DecidedSpan)
     binaryTest "DecidedBounds" (Proxy :: Proxy DecidedBounds)
-    -- binaryTest "DecidedLimit" (Proxy :: Proxy DecidedLimit)
-    -- binaryTest "DecidedMaybeLimit" (Proxy :: Proxy DecidedMaybeLimit)
+    binaryTest "DecidedLimit" (Proxy :: Proxy DecidedLimit)
+    binaryTest "DecidedMaybeLimit" (Proxy :: Proxy DecidedMaybeLimit)
   where
     jsonTest :: forall a
               . Arbitrary a
