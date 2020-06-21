@@ -1,0 +1,22 @@
+{
+  "name": "purescript-timeline-time",
+  "version": "1.0.0",
+  "description": "[![Build Status](https://travis-ci.org/openchronology/purescript-timeline-time.svg?branch=master)](https://travis-ci.org/openchronology/purescript-timeline-time)",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "spago test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openchronology/purescript-timeline-time.git"
+  },
+  "author": "Athan Clark <athan.clark@gmail.com>",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/openchronology/purescript-timeline-time/issues"
+  },
+  "homepage": "https://github.com/openchronology/purescript-timeline-time#readme"
+}

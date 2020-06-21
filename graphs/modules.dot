@@ -1,0 +1,53 @@
+digraph Modules {
+size="48,32";
+ratio="fill";
+subgraph cluster_0 {
+label="Test";
+color="#0000000F";
+style="filled";
+u9[label="Main",style="filled",fillcolor="#ffffbb",penwidth="0"];
+
+}
+subgraph cluster_1 {
+label="Timeline";
+color="#0000000F";
+style="filled";
+subgraph cluster_2 {
+label="Time";
+color="#0000000F";
+style="filled";
+u0[label="Unit",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u1[label="Span",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u2[label="MaybeLimit",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u3[label="Class",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u4[label="Value",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u5[label="Bounds",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u6[label="Limit",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u7[label="Max",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+u8[label="Min",style="filled",fillcolor="#ffbbbb",penwidth="0"];
+
+}
+
+}
+u4 -> u1;
+u0 -> u2;
+u4 -> u2;
+u5 -> u2;
+u7 -> u2;
+u8 -> u2;
+u1 -> u3;
+u2 -> u3;
+u4 -> u3;
+u5 -> u3;
+u6 -> u3;
+u7 -> u3;
+u8 -> u3;
+u4 -> u5;
+u4 -> u6;
+u5 -> u6;
+u7 -> u6;
+u8 -> u6;
+u4 -> u7;
+u4 -> u8;
+
+}
