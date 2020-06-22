@@ -76,6 +76,20 @@ instance eqMaybeLimit :: Eq a => Eq (MaybeLimit a) where
     Tuple (JustLimitMax x') (JustLimitMax y') -> x' == y'
     _ -> false
 
+instance ordMaybeLimit :: Ord a => Ord (MaybeLimit a) where
+  compare x y = case Tuple x y of
+    Tuple NothingLimit NothingLimit -> EQ
+    Tuple (JustLimitBounds x') (JustLimitBounds y') -> compare x' y'
+    Tuple (JustLimitMin x') (JustLimitMin y') -> compare x' y'
+    Tuple (JustLimitMax x') (JustLimitMax y') -> compare x' y'
+    Tuple (JustLimitBounds _) _ -> LT
+    Tuple (JustLimitMin _) (JustLimitBounds _) -> GT
+    Tuple (JustLimitMin _) _ -> LT
+    Tuple (JustLimitMax _) (JustLimitBounds _) -> GT
+    Tuple (JustLimitMax _) (JustLimitMin _) -> GT
+    Tuple (JustLimitMax _) _ -> LT
+    Tuple NothingLimit _ -> GT
+
 instance showMaybeLimit :: Show a => Show (MaybeLimit a) where
   show x = case x of
     JustLimitBounds y -> "(JustLimitBounds " <> show y <> ")"
