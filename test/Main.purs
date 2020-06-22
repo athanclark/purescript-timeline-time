@@ -8,6 +8,7 @@ import Timeline.Time.Span (DecidedSpan)
 import Timeline.Time.Bounds (DecidedBounds)
 import Timeline.Time.Limit (DecidedLimit)
 import Timeline.Time.MaybeLimit (DecidedMaybeLimit)
+import Timeline.Time.Class (class GetDecidedUnit, class ConvertTime, ConvertedTime (..), getDecidedUnit, convertTime)
 
 import Prelude
 import Data.Maybe (Maybe (..))
@@ -53,6 +54,14 @@ tests = do
     binaryTest "DecidedBounds" (Proxy :: Proxy DecidedBounds)
     binaryTest "DecidedLimit" (Proxy :: Proxy DecidedLimit)
     binaryTest "DecidedMaybeLimit" (Proxy :: Proxy DecidedMaybeLimit)
+  describe "Conversion Iso" do
+    conversionTest "DecidedValue" (Proxy :: Proxy DecidedValue)
+    conversionTest "DecidedMin" (Proxy :: Proxy DecidedMin)
+    conversionTest "DecidedMax" (Proxy :: Proxy DecidedMax)
+    conversionTest "DecidedSpan" (Proxy :: Proxy DecidedSpan)
+    conversionTest "DecidedBounds" (Proxy :: Proxy DecidedBounds)
+    conversionTest "DecidedLimit" (Proxy :: Proxy DecidedLimit)
+    conversionTest "DecidedMaybeLimit" (Proxy :: Proxy DecidedMaybeLimit)
   where
     jsonTest :: forall a
               . Arbitrary a
@@ -71,6 +80,14 @@ tests = do
                => DynamicByteLength a
                => String -> Proxy a -> _
     binaryTest name proxy = it name (liftEffect (quickCheck (binaryIso proxy)))
+    conversionTest :: forall a
+                    . Arbitrary a
+                   => Show a
+                   => Eq a
+                   => GetDecidedUnit a
+                   => ConvertTime a
+                   => String -> Proxy a -> _
+    conversionTest name proxy = it name (liftEffect (quickCheck (conversionIso proxy)))
 
 
 jsonIso :: forall a
@@ -116,3 +133,18 @@ derive newtype instance decodeArrayBufferBinaryFloat :: DecodeArrayBuffer Binary
 derive newtype instance dynamicByteLengthBinaryFloat :: DynamicByteLength BinaryFloat
 instance arbitraryBinaryFloat :: Arbitrary BinaryFloat where
   arbitrary = BinaryFloat <<< Float64BE <$> arbitrary
+
+
+conversionIso :: forall a
+               . GetDecidedUnit a
+               => ConvertTime a
+               => Show a
+               => Eq a
+               => Proxy a -> a -> Result
+conversionIso Proxy x =
+  let converted = convertTime (getDecidedUnit x) x
+  in  case converted of
+    NoChange y
+      | y == x -> Success
+      | otherwise -> Failed $ "Not equal: " <> show y
+    _ -> Failed $ "Not a NoChange: " <> show converted
