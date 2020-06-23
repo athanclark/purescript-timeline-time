@@ -180,23 +180,48 @@ instance arbitraryMaybeLimit :: Arbitrary a => Arbitrary (MaybeLimit a) where
 data DecidedMaybeLimit
   = DecidedMaybeLimitNumber (MaybeLimit Number)
 
--- FIXME should get value from index in explored timespace, if it exists.
--- newTimeScaleUnitSignal :: Effect (IxSig.IxSignal (read :: S.READ, write :: S.WRITE) DecidedMaybeLimit)
--- newTimeScaleUnitSignal = IxSig.make (DecidedMaybeLimitNumber NothingLimit)
-makeDecidedMaybeLimit :: { begin :: Maybe DecidedValue, end :: Maybe DecidedValue } -> DecidedMaybeLimit
-makeDecidedMaybeLimit { begin, end } = case Tuple begin end of
-  Tuple (Just (DecidedValueNumber begin')) (Just (DecidedValueNumber end')) -> DecidedMaybeLimitNumber (JustLimitBounds { begin: begin', end: end' })
-  Tuple (Just (DecidedValueNumber begin')) Nothing -> DecidedMaybeLimitNumber (JustLimitMin { begin: begin' })
-  Tuple Nothing (Just (DecidedValueNumber end')) -> DecidedMaybeLimitNumber (JustLimitMax { end: end' })
-  Tuple Nothing Nothing -> DecidedMaybeLimitNumber NothingLimit -- FIXME how would I know the unit?
+makeDecidedMaybeLimit :: DecidedUnit -> { begin :: Maybe DecidedValue, end :: Maybe DecidedValue } -> Maybe DecidedMaybeLimit
+makeDecidedMaybeLimit unit { begin, end } = case {unit,begin,end} of
+  { unit: DecidedUnitNumber
+    , begin: Just (DecidedValueNumber begin')
+    , end: Just (DecidedValueNumber end')
+    } -> Just $ DecidedMaybeLimitNumber $ JustLimitBounds { begin: begin', end: end' }
+  { unit: DecidedUnitNumber
+    , begin: Just (DecidedValueNumber begin')
+    , end: Nothing
+    } -> Just $ DecidedMaybeLimitNumber $ JustLimitMin { begin: begin' }
+  { unit: DecidedUnitNumber
+    , begin: Nothing
+    , end: Just (DecidedValueNumber end')
+    } -> Just $ DecidedMaybeLimitNumber $ JustLimitMax { end: end' }
+  { unit: DecidedUnitNumber
+    , begin: Nothing
+    , end: Nothing
+    } -> Just $ DecidedMaybeLimitNumber NothingLimit
+  _ -> Nothing
 
-unmakeDecidedMaybeLimit :: DecidedMaybeLimit -> { begin :: Maybe DecidedValue, end :: Maybe DecidedValue }
+unmakeDecidedMaybeLimit :: DecidedMaybeLimit -> { begin :: Maybe DecidedValue, end :: Maybe DecidedValue, unit :: DecidedUnit }
 unmakeDecidedMaybeLimit l = case l of
-  DecidedMaybeLimitNumber l' -> case l' of
-    JustLimitBounds { begin, end } -> { begin: Just (DecidedValueNumber begin), end: Just (DecidedValueNumber end) }
-    JustLimitMin { begin } -> { begin: Just (DecidedValueNumber begin), end: Nothing }
-    JustLimitMax { end } -> { begin: Nothing, end: Just (DecidedValueNumber end) }
-    NothingLimit -> { begin: Nothing, end: Nothing } -- FIXME how would I show the unit?
+  DecidedMaybeLimitNumber limit -> case limit of
+    JustLimitBounds { begin, end } -> { begin: Just (DecidedValueNumber begin), end: Just (DecidedValueNumber end), unit: DecidedUnitNumber }
+    JustLimitMin { begin } -> { begin: Just (DecidedValueNumber begin), end: Nothing, unit: DecidedUnitNumber }
+    JustLimitMax { end } -> { begin: Nothing, end: Just (DecidedValueNumber end), unit: DecidedUnitNumber }
+    NothingLimit -> { begin: Nothing, end: Nothing, unit: DecidedUnitNumber }
+
+makeDecidedMaybeLimitViaMaybeLimit :: DecidedUnit -> MaybeLimit DecidedValue -> Maybe DecidedMaybeLimit
+makeDecidedMaybeLimitViaMaybeLimit unit mL = case mL of
+  JustLimitBounds {begin,end} -> makeDecidedMaybeLimit unit {begin: Just begin, end: Just end}
+  JustLimitMin {begin} -> makeDecidedMaybeLimit unit {begin: Just begin, end: Nothing}
+  JustLimitMax {end} -> makeDecidedMaybeLimit unit {begin: Nothing, end: Just end}
+  NothingLimit -> makeDecidedMaybeLimit unit {begin: Nothing, end: Nothing}
+
+unmakeDecidedMaybeLimitWithMaybeLimit :: DecidedMaybeLimit -> { limit :: MaybeLimit DecidedValue, unit :: DecidedUnit }
+unmakeDecidedMaybeLimitWithMaybeLimit l = case l of
+  DecidedMaybeLimitNumber limit -> case limit of
+    JustLimitBounds { begin, end } -> { limit: JustLimitBounds {begin: DecidedValueNumber begin, end: DecidedValueNumber end}, unit: DecidedUnitNumber }
+    JustLimitMin { begin } -> { limit: JustLimitMin {begin: DecidedValueNumber begin}, unit: DecidedUnitNumber }
+    JustLimitMax { end } -> { limit: JustLimitMax {end: DecidedValueNumber end}, unit: DecidedUnitNumber }
+    NothingLimit -> { limit: NothingLimit, unit: DecidedUnitNumber }
 
 getMaybeLimitDecidedUnit :: DecidedMaybeLimit -> DecidedUnit
 getMaybeLimitDecidedUnit l = case l of
