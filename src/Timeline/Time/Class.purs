@@ -10,7 +10,6 @@ import Timeline.Time.Limit (DecidedLimit(..), Limit(..))
 import Timeline.Time.MaybeLimit (DecidedMaybeLimit(..), MaybeLimit(..))
 import Prelude
 import Data.Tuple (Tuple (..))
-import Data.Generic.Rep (class Generic)
 
 -- | A class for formatting index types as strings, to be listed
 class AsSecondaryString a where

@@ -20,7 +20,6 @@ import Data.ArrayBuffer.Class
   , class DynamicByteLength
   , putArrayBuffer
   , readArrayBuffer
-  , byteLength
   )
 import Data.ArrayBuffer.Class.Types (Uint8 (..))
 import Test.QuickCheck (class Arbitrary)
