@@ -68,12 +68,12 @@ byteLengthSpan Proxy {start,stop} = byteLength (Tuple start stop)
 data DecidedSpan
   = DecidedSpanNumber (Span Number)
 
-makeDecidedSpan :: { start :: DecidedValue, stop :: DecidedValue } -> Maybe DecidedSpan
+makeDecidedSpan :: Span DecidedValue -> Maybe DecidedSpan
 makeDecidedSpan { start, stop } = case Tuple start stop of
   Tuple (DecidedValueNumber start') (DecidedValueNumber stop') -> Just (DecidedSpanNumber { start: start', stop: stop' })
   _ -> Nothing
 
-unmakeDecidedSpan :: DecidedSpan -> { start :: DecidedValue, stop :: DecidedValue }
+unmakeDecidedSpan :: DecidedSpan -> Span DecidedValue
 unmakeDecidedSpan b = case b of
   DecidedSpanNumber { start, stop } -> { start: DecidedValueNumber start, stop: DecidedValueNumber stop }
 
