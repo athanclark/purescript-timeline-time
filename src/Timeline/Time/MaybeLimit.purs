@@ -23,6 +23,8 @@ import Timeline.Time.Bounds
 import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Data.Foldable (class Foldable)
+import Data.Traversable (class Traversable)
 import Data.UInt (fromInt) as UInt
 import Data.NonEmpty (NonEmpty(..))
 import Data.Generic.Rep (class Generic)
@@ -67,6 +69,35 @@ instance functorMaybeLimit :: Functor MaybeLimit where
     JustLimitMin y -> JustLimitMin y {begin = f y.begin}
     JustLimitMax y -> JustLimitMax y {end = f y.end}
     NothingLimit -> NothingLimit
+
+instance foldableMaybeLimit :: Foldable MaybeLimit where
+  foldr f acc x = case x of
+    JustLimitBounds y -> f y.begin (f y.end acc)
+    JustLimitMin y -> f y.begin acc
+    JustLimitMax y -> f y.end acc
+    NothingLimit -> acc
+  foldl f acc x = case x of
+    JustLimitBounds y -> f (f acc y.begin) y.end
+    JustLimitMin y -> f acc y.begin
+    JustLimitMax y -> f acc y.end
+    NothingLimit -> acc
+  foldMap f x = case x of
+    JustLimitBounds y -> f y.begin <> f y.end
+    JustLimitMin y -> f y.begin
+    JustLimitMax y -> f y.end
+    NothingLimit -> mempty
+
+instance traversableMaybeLimit :: Traversable MaybeLimit where
+  traverse f x = case x of
+    JustLimitBounds y -> (\begin end -> JustLimitBounds {begin,end}) <$> f y.begin <*> f y.end
+    JustLimitMin y -> (\begin -> JustLimitMin {begin}) <$> f y.begin
+    JustLimitMax y -> (\end -> JustLimitMax {end}) <$> f y.end
+    NothingLimit -> pure NothingLimit
+  sequence x = case x of
+    JustLimitBounds y -> (\begin end -> JustLimitBounds {begin,end}) <$> y.begin <*> y.end
+    JustLimitMin y -> (\begin -> JustLimitMin {begin}) <$> y.begin
+    JustLimitMax y -> (\end -> JustLimitMax {end}) <$> y.end
+    NothingLimit -> pure NothingLimit
 
 instance eqMaybeLimit :: Eq a => Eq (MaybeLimit a) where
   eq x y = case Tuple x y of

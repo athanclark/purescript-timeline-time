@@ -22,6 +22,8 @@ import Timeline.Time.Bounds
 import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Data.Foldable (class Foldable)
+import Data.Traversable (class Traversable)
 import Data.UInt (fromInt) as UInt
 import Data.NonEmpty (NonEmpty(..))
 import Data.Generic.Rep (class Generic)
@@ -62,6 +64,30 @@ instance functorLimit :: Functor Limit where
     LimitBounds y -> LimitBounds y {begin = f y.begin, end = f y.end}
     LimitMin y -> LimitMin y {begin = f y.begin}
     LimitMax y -> LimitMax y {end = f y.end}
+
+instance foldableLimit :: Foldable Limit where
+  foldr f acc x = case x of
+    LimitBounds y -> f y.begin (f y.end acc)
+    LimitMin y -> f y.begin acc
+    LimitMax y -> f y.end acc
+  foldl f acc x = case x of
+    LimitBounds y -> f (f acc y.begin) y.end
+    LimitMin y -> f acc y.begin
+    LimitMax y -> f acc y.end
+  foldMap f x = case x of
+    LimitBounds y -> f y.begin <> f y.end
+    LimitMin y -> f y.begin
+    LimitMax y -> f y.end
+
+instance traversableLimit :: Traversable Limit where
+  traverse f x = case x of
+    LimitBounds y -> (\begin end -> LimitBounds {begin,end}) <$> f y.begin <*> f y.end
+    LimitMin y -> (\begin -> LimitMin {begin}) <$> f y.begin
+    LimitMax y -> (\end -> LimitMax {end}) <$> f y.end
+  sequence x = case x of
+    LimitBounds y -> (\begin end -> LimitBounds {begin,end}) <$> y.begin <*> y.end
+    LimitMin y -> (\begin -> LimitMin {begin}) <$> y.begin
+    LimitMax y -> (\end -> LimitMax {end}) <$> y.end
 
 instance eqLimit :: Eq a => Eq (Limit a) where
   eq x y = case Tuple x y of
