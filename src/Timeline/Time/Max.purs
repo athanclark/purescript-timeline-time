@@ -18,6 +18,7 @@ import Data.Argonaut
   , jsonEmptyObject
   , (:=)
   , (.:)
+  , JsonDecodeError
   )
 import Data.ArrayBuffer.Types (ArrayBuffer, ByteOffset, ByteLength)
 import Data.ArrayBuffer.Class
@@ -45,7 +46,7 @@ genMax Proxy = do
 encodeJsonMax :: forall a. EncodeJson a => Proxy a -> Max a -> Json
 encodeJsonMax Proxy { end } = "end" := end ~> jsonEmptyObject
 
-decodeJsonMax :: forall a. DecodeJson a => Proxy a -> Json -> Either String (Max a)
+decodeJsonMax :: forall a. DecodeJson a => Proxy a -> Json -> Either JsonDecodeError (Max a)
 decodeJsonMax Proxy json = do
   o <- decodeJson json
   end <- o .: "end"

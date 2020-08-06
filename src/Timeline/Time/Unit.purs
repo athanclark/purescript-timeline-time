@@ -12,7 +12,7 @@ import Data.Argonaut
   , class DecodeJson
   , encodeJson
   , decodeJson
-  , fail
+  , JsonDecodeError (TypeMismatch)
   )
 import Data.ArrayBuffer.Class
   ( class EncodeArrayBuffer
@@ -22,6 +22,7 @@ import Data.ArrayBuffer.Class
   , readArrayBuffer
   )
 import Data.ArrayBuffer.Class.Types (Uint8 (..))
+import Control.Monad.Error.Class (throwError)
 import Test.QuickCheck (class Arbitrary)
 import Test.QuickCheck.Gen (elements)
 
@@ -48,7 +49,7 @@ instance decodeJsonDecidedUnit :: DecodeJson DecidedUnit where
     case s of
       "number" -> pure DecidedUnitNumber
       "foo" -> pure DecidedUnitFoo
-      _ -> fail $ "Unrecognized DecidedUnit: " <> s
+      _ -> throwError $ TypeMismatch $ "Unrecognized DecidedUnit: " <> s
 
 instance encodeArrayBufferDecidedUnit :: EncodeArrayBuffer DecidedUnit where
   putArrayBuffer b o x = putArrayBuffer b o $ Uint8 $ UInt.fromInt $ case x of

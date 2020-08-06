@@ -39,7 +39,7 @@ import Data.Argonaut
   , jsonEmptyObject
   , (:=)
   , (.:)
-  , fail
+  , JsonDecodeError (TypeMismatch)
   )
 import Data.ArrayBuffer.Class
   ( class EncodeArrayBuffer
@@ -51,6 +51,7 @@ import Data.ArrayBuffer.Class
   )
 import Data.ArrayBuffer.Class.Types (Float64BE (..), Uint8 (..))
 import Control.Alternative ((<|>))
+import Control.Monad.Error.Class (throwError)
 import Test.QuickCheck (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (oneOf)
 import Type.Proxy (Proxy(..))
@@ -152,7 +153,7 @@ instance decodeJsonMaybeLimit :: DecodeJson a => DecodeJson (MaybeLimit a) where
         s <- decodeJson json
         case s of
           "nothingLimit" -> pure NothingLimit
-          _ -> fail $ "Unrecognized MaybeLimit: " <> s
+          _ -> throwError $ TypeMismatch $ "Unrecognized MaybeLimit: " <> s
     obj <|> str
 
 instance encodeArrayBufferMaybeLimit :: EncodeArrayBuffer a => EncodeArrayBuffer (MaybeLimit a) where

@@ -20,6 +20,7 @@ import Data.Argonaut
   , jsonEmptyObject
   , (:=)
   , (.:)
+  , JsonDecodeError
   )
 import Data.ArrayBuffer.Types (ArrayBuffer, ByteOffset, ByteLength)
 import Data.ArrayBuffer.Class
@@ -48,7 +49,7 @@ genBounds Proxy = do
 encodeJsonBounds :: forall a. EncodeJson a => Proxy a -> Bounds a -> Json
 encodeJsonBounds Proxy { begin, end } = "begin" := begin ~> "end" := end ~> jsonEmptyObject
 
-decodeJsonBounds :: forall a. DecodeJson a => Proxy a -> Json -> Either String (Bounds a)
+decodeJsonBounds :: forall a. DecodeJson a => Proxy a -> Json -> Either JsonDecodeError (Bounds a)
 decodeJsonBounds Proxy json = do
   o <- decodeJson json
   begin <- o .: "begin"

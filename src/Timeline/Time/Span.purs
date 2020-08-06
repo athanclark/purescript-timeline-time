@@ -20,6 +20,7 @@ import Data.Argonaut
   , jsonEmptyObject
   , (:=)
   , (.:)
+  , JsonDecodeError
   )
 import Data.ArrayBuffer.Types (ArrayBuffer, ByteOffset, ByteLength)
 import Data.ArrayBuffer.Class
@@ -48,7 +49,7 @@ genSpan Proxy = do
 encodeJsonSpan :: forall a. EncodeJson a => Proxy a -> Span a -> Json
 encodeJsonSpan Proxy { start, stop } = "start" := start ~> "stop" := stop ~> jsonEmptyObject
 
-decodeJsonSpan :: forall a. DecodeJson a => Proxy a -> Json -> Either String (Span a)
+decodeJsonSpan :: forall a. DecodeJson a => Proxy a -> Json -> Either JsonDecodeError (Span a)
 decodeJsonSpan Proxy json = do
   o <- decodeJson json
   start <- o .: "start"

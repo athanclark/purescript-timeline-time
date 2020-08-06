@@ -100,7 +100,7 @@ jsonIso Proxy x =
   -- trace x \_ ->
   let result = decodeJson (encodeJson x)
   in  case result of
-        Left e -> Failed $ "Couldn't parse: " <> e
+        Left e -> Failed $ "Couldn't parse: " <> show e
         Right y
           | y == x -> Success
           | otherwise ->

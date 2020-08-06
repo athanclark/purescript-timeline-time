@@ -18,6 +18,7 @@ import Data.Argonaut
   , jsonEmptyObject
   , (:=)
   , (.:)
+  , JsonDecodeError
   )
 import Data.ArrayBuffer.Types (ArrayBuffer, ByteOffset, ByteLength)
 import Data.ArrayBuffer.Class
@@ -45,7 +46,7 @@ genMin Proxy = do
 encodeJsonMin :: forall a. EncodeJson a => Proxy a -> Min a -> Json
 encodeJsonMin Proxy { begin } = "begin" := begin ~> jsonEmptyObject
 
-decodeJsonMin :: forall a. DecodeJson a => Proxy a -> Json -> Either String (Min a)
+decodeJsonMin :: forall a. DecodeJson a => Proxy a -> Json -> Either JsonDecodeError (Min a)
 decodeJsonMin Proxy json = do
   o <- decodeJson json
   begin <- o .: "begin"
